@@ -1,7 +1,8 @@
 #define PIPE_SEM_H
 
-typedef struct {
-	int x;
+struct pipe_sem_t;
+typedef struct pipe_sem_t {
+	int value;
 } pipe_sem_t;
 
 #ifndef PIPE_SEM_H
