@@ -2,7 +2,7 @@
 
 struct pipe_sem_t;
 typedef struct pipe_sem_t {
-	/* used to implement an unamed pipe */
+	int value;
 	int lock[2];
 } pipe_sem_t;
 
