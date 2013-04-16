@@ -3,4 +3,4 @@ all:
 	gcc -c rw_test.c -o rw_test.o
 	gcc -lpthread rw_test.o pipe_sem.o -o rw_test
 	clear
-	./rw_test 5 0 1 1 1 1 1
+	./rw_test 5 0 1 0 1 1 1

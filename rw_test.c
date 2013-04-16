@@ -5,9 +5,6 @@
 
 int SHARED_INTEGER = 0;
 pipe_sem_t mutex;
-pipe_sem_t wrt;
-int readcount = 0;
-
 
 #define WRITER_PRIORITY 0
 #define READER_PRIORITY 1
@@ -16,10 +13,8 @@ int readcount = 0;
 struct node_t;
 typedef struct node_t                                               
 {                                                               
-	  int priority;
-	  pthread_t* tid;
+	  long tid;
       struct node_t *next;
-	  struct node_t *prev;
 } node_t; 
 
 struct list_t;
@@ -28,58 +23,104 @@ typedef struct list_t
 	int size;
 	node_t *head;
 } list_t;
+
 void push(list_t* list, node_t* node);
 int is_empty(list_t* list);
 node_t* pop(list_t* list);
-list_t* ready_queue;
+
+
+list_t* readerQ;
+list_t* writerQ;
 
 void *reader_thread( void *x ) {
-	printf("Reader thread <%d> starts\n", pthread_self());
+
+	//printf("Reader thread <%ld> starts\n", pthread_self());
 	
 	//lock
-		pipe_sem_wait(&mutex);
-		if(readcount == 0) pipe_sem_wait(&wrt);
-		readcount++;
-		pipe_sem_signal(&mutex);
+		pipe_sem_wait(&mutex);	
+		
+		node_t* new_node;
+		new_node = (node_t*) malloc(sizeof(node_t));
+		if(!new_node) exit( -1 );
+		new_node->tid = pthread_self();
+		push(readerQ, new_node);
+		if(is_empty(writerQ) && is_empty(readerQ))
+		{
+			// do nothing
+		}
+		else if(is_empty(writerQ) && !is_empty(readerQ)) 
+		{
+			pthread_yield(pop(readerQ)); 
+		}
+		else if(!is_empty(writerQ) && is_empty(readerQ)) 
+		{
+			pthread_yield(pop(writerQ)); 
+		}
+		else if(!is_empty(writerQ) && !is_empty(readerQ)) 
+		{
+			pthread_yield(pop(writerQ)); 
+		}
+		
 	//lock
+
 	
 	//cs
-		printf("Reader thread <%d> enters CS\n", pthread_self());
+		printf("Reader thread <%ld> enters CS\n", pthread_self());
 		//sleep(1);
-		printf("Reader thread <%d> read the shared data as having value: %d\n", pthread_self(), SHARED_INTEGER);
-		printf("Reader thread <%d> is exiting CS\n", pthread_self());
+		//printf("Reader thread <%ld> read the shared data as having value: %d\n", pthread_self(), SHARED_INTEGER);
+		printf("Reader thread <%ld> is exiting CS\n", pthread_self());
 	//cs
 	
 	//unlock
-		pipe_sem_wait(&mutex);
-		readcount--;
-		if(readcount == 0) signal(&wrt);
 		pipe_sem_signal(&mutex);
 	//unlock
 	
-	printf("Reader thread <%d> ends\n", pthread_self());
+	//printf("Reader thread <%ld> ends\n", pthread_self());
 }
 
 void *writer_thread( void *x ) {
-	printf("Writer thread <%d> starts\n", pthread_self());
-
+	//printf("Writer thread <%ld> starts\n", pthread_self());
 	//lock
-		pipe_sem_wait(&wrt);
+		pipe_sem_wait(&mutex);
+		
+		node_t* new_node;
+		new_node = (node_t*) malloc(sizeof(node_t));
+		if(!new_node) exit( -1 );
+		new_node->tid = pthread_self();
+		push(writerQ, new_node);
+		if(is_empty(writerQ) && is_empty(readerQ))
+		{
+			// do nothing
+			
+		}
+		else if(is_empty(writerQ) && !is_empty(readerQ)) 
+		{
+			
+			pthread_yield(pop(writerQ)); 
+		}
+		else if(!is_empty(writerQ) && is_empty(readerQ)) 
+		{
+			pthread_yield(pop(writerQ)); 
+		}
+		else if(!is_empty(writerQ) && !is_empty(readerQ)) 
+		{
+			pthread_yield(pop(writerQ)); 
+		}
 	//lock
 	
 	//cs
-		printf("Writer thread <%d> enters CS\n", pthread_self());
+		printf("Writer thread <%ld> enters CS\n", pthread_self());
 		//sleep(1);
-		++SHARED_INTEGER;
-		printf("Writer thread <%d> incrementing shared data value by one to: %d\n", pthread_self(), SHARED_INTEGER);
-		printf("Writer thread <%d> is exiting CS\n", pthread_self());
+		SHARED_INTEGER++;
+		//printf("Writer thread <%ld> incrementing shared data value by one to: %d\n", pthread_self(), SHARED_INTEGER);
+		printf("Writer thread <%ld> is exiting CS\n", pthread_self());
 	//cs
 	
 	//unlock
-		pipe_sem_signal(&wrt);
+		pipe_sem_signal(&mutex);
 	//unlock
 
-	printf("Writer thread <%d> ends\n", pthread_self());
+	//printf("Writer thread <%ld> ends\n", pthread_self());
 }
 
 int main(int argc, char** args) {
@@ -115,12 +156,14 @@ int main(int argc, char** args) {
 	// extract thread arrival interval from program arguments
 	thread_arrival_interval = atoi(args[n_arriving_threads + 2]);
 	
-	
 	pipe_sem_init(&mutex,1);
-	pipe_sem_init(&wrt,1);
 	
-	ready_queue = (list_t*)malloc(sizeof(list_t));
-	if(!ready_queue) return;
+	
+	readerQ = (list_t*)malloc(sizeof(list_t));
+	if(!readerQ) return;
+	
+	writerQ = (list_t*)malloc(sizeof(list_t));
+	if(!writerQ) return;
 	
 	for(i = 0 ; i < n_arriving_threads ; i++) {
 		if(sequence[i] == 1) {
@@ -132,7 +175,7 @@ int main(int argc, char** args) {
 		}
 		sleep(thread_arrival_interval);
 	}
-
+	
 	printf("final value:  %d\n", SHARED_INTEGER);
 	
 	// return 0 to indicate successfull execution
@@ -158,7 +201,6 @@ void push(list_t* list, node_t* node)
 {
 	if( list->size == 0 )
 	{
-		node->prev = NULL_NODE;
 		node->next = NULL_NODE;
 		list->head = node;
 	}
@@ -171,7 +213,6 @@ void push(list_t* list, node_t* node)
 		}
 		
 		cur->next = node;
-		node->prev = cur;
 	}
 	list->size++;
 }
@@ -195,55 +236,16 @@ int is_empty(list_t* list)
 */
 node_t* pop(list_t* list)
 {
-	int min;
-	int min_index = 0;
-	node_t* cur = list->head;
-	int i = 0;
-
+	node_t* to_return;
 	if( list->size == 0 )
 	{
-		min = -1;
-	}
-	else if( list->size == 1 )
-	{
-		min = 0;
+		return NULL_NODE;
 	}
 	else
 	{
-		
-		while(cur->next != NULL_NODE && i < list->size)
-		{
-			if(cur->next->priority < cur->priority)
-			{
-				min_index = i+1; 
-			}
-			i++;
-			cur = cur->next;
-			
-		}
-		min = min_index;
-	}
-
-	i = 0;
-	cur = list->head;
-	while(i < min)
-	{
-		cur = cur->next;
-		i++;
-	}
-	if(cur == list->head)
-	{
-		list->head = cur->next;
-	}
-	else if(cur->next == NULL_NODE)
-	{
-		cur->prev->next = NULL_NODE;
-	}
-	else
-	{
-		cur->prev->next = cur->next;
-		cur->next->prev = cur->prev;
+		to_return = list->head;
+		list->head = to_return->next;
 	}
 	list->size--;
-	return cur;
+	return to_return;
 }
