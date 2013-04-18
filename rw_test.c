@@ -1,3 +1,23 @@
+/**
+ * @file   rw_test.c
+ * @Author Ryan Kinsey Sanders (rks@iastate.edu)
+ * @date   April, 2013
+ * @brief  A "writer priority version" of the 
+ * reader-writer problem is implemented using
+ * the 'pipe_sem' libary.
+ *
+ * In this file, a " writer priority version" 
+ * of the reader-writer problem is implemented
+ * using the  'pipe_sem' libary which itself is
+ * buit upon unix pipes.  This file futher tests
+ * the reader-writer implementation by simulating
+ * readers and writers using the pthreads libary
+ * and user input from the command line.  One 
+ * should refer to the project spects of project
+ * 2 for COM S 352 for how to properly input 
+ * data and read output of this program.
+ */
+ 
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -56,6 +76,8 @@ void *writer_thread( void *x ) {
 }
 
 int main(int argc, char** args) {
+	
+	perror("be sure to make it a counting semaphore")s
 	
 	// a variable for looping
 	int i;
