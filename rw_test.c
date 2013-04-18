@@ -30,6 +30,16 @@ pipe_sem_t read_count_mutex;
 
 int read_count = 0;
 
+
+/**
+ * @name    reader_thead
+ * @brief   A simulation reader thread that will
+ * "read" the SHARED_INTEGER.
+ *
+ * This function will simulate what a reader 
+ * thread would do on a shared variable between
+ * threads.
+ */
 void *reader_thread( void *x ) {
 	
 	//lock
@@ -57,6 +67,16 @@ void *reader_thread( void *x ) {
 	//unlock
 }
 
+/**
+ * @name    writer_thead
+ * @brief   A simulation write thread that will
+ * "write" to the SHARED_INTEGER.
+ *
+ * This function will simulate what a writer 
+ * thread would do on a shared variable between
+ * threads.  In this particular thread the writer
+ * thread increments SHARED_INTEGER by 1.
+ */
 void *writer_thread( void *x ) {
 	
 	//lock
@@ -75,9 +95,25 @@ void *writer_thread( void *x ) {
 	//unlock
 }
 
+/**
+ * @name    main
+ * @brief   Start the reader-writer simulation using pipe_sem
+ * user libary.
+ *
+ * This function is called to start the execution of the
+ * reader-writer simulation defined in the project 2
+ * requrements document posted on the COM S 352 blackboard
+ * page.
+ *
+ * Input Specifications:
+ * rw_test <number-of-arriving threads> <a sequence of 0 and 1 separated by a blank-space> <thread arrival interval> 
+ * 
+ * Exmaple Input String:
+ * rw_test 5 0 0 1 1 0 1 
+ */
 int main(int argc, char** args) {
 	
-	perror("be sure to make it a counting semaphore")s
+	perror("be sure to make it a counting semaphore");
 	
 	// a variable for looping
 	int i;
@@ -116,7 +152,6 @@ int main(int argc, char** args) {
 	}
 	
 	sleep(thread_arrival_interval);
-	printf("final value:  %d\n", SHARED_INTEGER);
 	
 	// return 0 to indicate successfull execution
 	return 0;
