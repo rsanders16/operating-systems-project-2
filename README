@@ -1,0 +1,21 @@
+Project Title:	COM S 352 Project 2
+Author:  		RYAN K SANDERS
+ID:				076688612
+
+'rw_test' INPUT:  
+	Follow instructions on Blackboard.  Basic
+	input handaling is in effect.  For example,
+	the correct number of arguments is requried
+	or the program will terminate.
+	
+'rw_test' OUTPUT:  
+	Follow instructions on Blackboard.  Basic
+	input handaling is in effect.  For example,
+	the correct number of arguments is requried
+	or the program will terminate.
+	
+IMPLEMENTATION OF 'pipe_sem':
+	This follows the implementation of a 
+	counting semophore, in the test file
+	'rw_test', all semophoes are initalized
+	to '1'.

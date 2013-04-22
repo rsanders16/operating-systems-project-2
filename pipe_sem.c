@@ -44,11 +44,11 @@
  * that will wait to aquaire the abstract 'lock'.
  */
 void pipe_sem_wait( pipe_sem_t *sem ) {
-	//sem->value--;
-	//if( sem->value < 0 ) {
+	sem->value--;
+	if( sem->value < 0 ) {
 		char buffer[ BUFFER_SIZE ]; 
 		read( sem->lock[ 0 ], buffer, BUFFER_SIZE );
-	//}
+	}
 }
 
 /**
@@ -69,10 +69,10 @@ void pipe_sem_wait( pipe_sem_t *sem ) {
  * that will wait to aquaire the abstract 'lock'.
  */
 void pipe_sem_signal( pipe_sem_t *sem ) {
-	//sem->value++;
-	//if( sem->value <= 0 ) {
+	sem->value++;
+	if( sem->value <= 0 ) {
 		write( sem->lock[ 1 ], "ok        ", BUFFER_SIZE );
-	//}
+	}
 }
 
 /**
@@ -96,10 +96,8 @@ void pipe_sem_init( pipe_sem_t *sem, int value ) {
 	sem->value = value;
 	
 	if( pipe( sem->lock ) != 0 ){ 
-		perror( "pipe_sem_wait.c :: pipe_sem_init( pipe_sem_t* sem, int value ) :: Failed to initialize unnamed pipe.\n" );
+		perror( "Failed to initialize unnamed pipe.\n" );
 		exit( 1 ); 
 	}
-	if (value > 0) {
-		pipe_sem_signal( sem );
-	}
+
 }

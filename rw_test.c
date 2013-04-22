@@ -59,9 +59,9 @@ void *reader_thread( void *x ) {
 	//lock
 
 	//cs
-	printf("Reader thread %ld enters CS\n", pthread_self());
+	printf("Reader thread %ld enters CS.\n", (int*)x);
 	sleep(3);
-	printf("Reader thread %ld is exiting CS\n", pthread_self());
+	printf("Reader thread %ld is exiting CS.\n", (int*)x);
 	//cs
 	
 	//unlock
@@ -98,10 +98,10 @@ void *writer_thread( void *x ) {
 	//lock
 	
 	//cs
-	printf("Writer thread %ld enters CS\n", pthread_self());
+	printf("Writer thread %ld enters CS.\n", (int*)x);
 	SHARED_INTEGER = SHARED_INTEGER + 1;
 	sleep(3);
-	printf("Writer thread %ld is exiting CS\n", pthread_self());
+	printf("Writer thread %ld is exiting CS.\n", (int*)x);
 	//cs
 	
 	//unlock
@@ -135,8 +135,6 @@ void *writer_thread( void *x ) {
  */
 int main(int argc, char** args) {
 	
-	perror("Counting Semophore?");
-	
 	// a variable for looping
 	int i;
 
@@ -147,7 +145,13 @@ int main(int argc, char** args) {
 	int thread_arrival_interval = 0;
 	
 	// to be used as a dynamic array of pthread_t structures
-	pthread_t *th; 
+	pthread_t *th;
+
+	// make sure arguments count is valid to prevent seg fault
+	if( argc <= 1 || argc <= (atoi( args[1] ) + 2) ) {
+			fprintf(stderr, "Argument Count Error - Exiting...\n");
+			return -1;
+	}
 
 	// extract number of arriving threads from program arguments
 	n_arriving_threads = atoi( args[1] );
@@ -168,10 +172,10 @@ int main(int argc, char** args) {
 	// using the thread_arrival_interval simulate arriving reader/writer threads by calling pthread's pthread_create
 	for(i = 0 ; i < n_arriving_threads ; i++) {
 		if(atoi (args[i + 2]) == 1) {
-			pthread_create(&th[i],NULL,writer_thread,NULL);
+			pthread_create(&th[i],NULL,writer_thread,i);
 		}
 		else {
-			pthread_create(&th[i],NULL,reader_thread,NULL);
+			pthread_create(&th[i],NULL,reader_thread,i);
 		}
 		sleep(thread_arrival_interval);
 	}
@@ -179,7 +183,11 @@ int main(int argc, char** args) {
 	// join the current thread with all child threads to ensure all child threads finish executing
 	for(i = 0 ; i < n_arriving_threads ; i++) {
 		pthread_join(th[i], NULL);
+		
 	}
+	
+	// free the array of pthread_t structures
+	free(th);
 	
 	// return 0 to indicate successfull execution
 	return 0;
