@@ -25,10 +25,11 @@
 
 int SHARED_INTEGER = 0;
 
-pipe_sem_t wrt;
-pipe_sem_t readx;
-pipe_sem_t read_count_mutex;
-pipe_sem_t write_count_mutex;
+pipe_sem_t mutex_1;
+pipe_sem_t mutex_2;
+pipe_sem_t mutex_3;
+pipe_sem_t r;
+pipe_sem_t w;
 
 int read_count = 0;
 int write_count = 0;
@@ -43,17 +44,18 @@ int write_count = 0;
  * threads.
  */
 void *reader_thread( void *x ) {
-	//while(write_count > 0) {
-	//	sleep(1);
-	//}
+
 	//lock
-	pipe_sem_wait( &readx );
-	pipe_sem_wait( &read_count_mutex );
-	if( read_count == 0 || write_count > 0 ) {
-		pipe_sem_wait( &wrt );
-	}
-	read_count++;
-	pipe_sem_signal( &read_count_mutex );
+	pipe_sem_wait(&mutex_3);
+		pipe_sem_wait(&r);
+			pipe_sem_wait(&mutex_1);
+				read_count++;
+				if(read_count == 1) {
+					pipe_sem_wait(&w);
+				}
+			pipe_sem_signal(&mutex_1);
+		pipe_sem_signal(&r);
+	pipe_sem_signal(&mutex_3);
 	//lock
 
 	//cs
@@ -63,15 +65,12 @@ void *reader_thread( void *x ) {
 	//cs
 	
 	//unlock
-	pipe_sem_wait( &read_count_mutex );
-	read_count--;
-	if( read_count == 0 ) {
-		pipe_sem_signal( &wrt );
-	}
-	else {
-		pipe_sem_signal( &readx);
-	}
-	pipe_sem_signal( &read_count_mutex );
+	pipe_sem_wait(&mutex_1);
+		read_count--;
+		if(read_count == 0) {
+			pipe_sem_signal(&w);
+		}
+	pipe_sem_signal(&mutex_1);
 	//unlock
 }
 
@@ -88,9 +87,14 @@ void *reader_thread( void *x ) {
 void *writer_thread( void *x ) {
 	
 	//lock
+	pipe_sem_wait(&mutex_2);
 	write_count++;
-	pipe_sem_wait( &wrt );
-	write_count--;
+	if(write_count == 1) {
+		pipe_sem_wait(&r);
+	}
+	pipe_sem_signal(&mutex_2);
+	
+	pipe_sem_wait(&w);
 	//lock
 	
 	//cs
@@ -101,7 +105,14 @@ void *writer_thread( void *x ) {
 	//cs
 	
 	//unlock
-	pipe_sem_signal( &wrt );
+	pipe_sem_signal(&w);
+	
+	pipe_sem_wait(&mutex_2);
+		write_count--;
+		if(write_count == 0) {
+			pipe_sem_signal(&r);
+		}
+	pipe_sem_signal(&mutex_2);
 	//unlock
 	
 }
@@ -148,10 +159,11 @@ int main(int argc, char** args) {
 	th = (pthread_t*) malloc(sizeof(pthread_t) * n_arriving_threads);
 
 	// init all pipe_sem(s)
-	pipe_sem_init(&wrt, n_arriving_threads);
-	pipe_sem_init(&readx, n_arriving_threads);
-	pipe_sem_init(&read_count_mutex, n_arriving_threads);
-	pipe_sem_init(&write_count_mutex, n_arriving_threads);
+	pipe_sem_init(&mutex_1, 1);
+	pipe_sem_init(&mutex_2, 1);
+	pipe_sem_init(&mutex_3, 1);
+	pipe_sem_init(&r, 1);
+	pipe_sem_init(&w, 1);
 	
 	// using the thread_arrival_interval simulate arriving reader/writer threads by calling pthread's pthread_create
 	for(i = 0 ; i < n_arriving_threads ; i++) {
