@@ -26,10 +26,12 @@
 int SHARED_INTEGER = 0;
 
 pipe_sem_t wrt;
+pipe_sem_t readx;
 pipe_sem_t read_count_mutex;
+pipe_sem_t write_count_mutex;
 
 int read_count = 0;
-
+int write_count = 0;
 
 /**
  * @name    reader_thead
@@ -41,10 +43,13 @@ int read_count = 0;
  * threads.
  */
 void *reader_thread( void *x ) {
-	
+	//while(write_count > 0) {
+	//	sleep(1);
+	//}
 	//lock
+	pipe_sem_wait( &readx );
 	pipe_sem_wait( &read_count_mutex );
-	if( read_count == 0 ) {
+	if( read_count == 0 || write_count > 0 ) {
 		pipe_sem_wait( &wrt );
 	}
 	read_count++;
@@ -52,9 +57,9 @@ void *reader_thread( void *x ) {
 	//lock
 
 	//cs
-	printf("Reader thread <%ld> enters CS\n", pthread_self());
-	sleep(1);
-	printf("Reader thread <%ld> is exiting CS\n", pthread_self());
+	printf("Reader thread %ld enters CS\n", pthread_self());
+	sleep(3);
+	printf("Reader thread %ld is exiting CS\n", pthread_self());
 	//cs
 	
 	//unlock
@@ -62,6 +67,9 @@ void *reader_thread( void *x ) {
 	read_count--;
 	if( read_count == 0 ) {
 		pipe_sem_signal( &wrt );
+	}
+	else {
+		pipe_sem_signal( &readx);
 	}
 	pipe_sem_signal( &read_count_mutex );
 	//unlock
@@ -80,19 +88,22 @@ void *reader_thread( void *x ) {
 void *writer_thread( void *x ) {
 	
 	//lock
+	write_count++;
 	pipe_sem_wait( &wrt );
+	write_count--;
 	//lock
 	
 	//cs
-	printf("Writer thread <%ld> enters CS\n", pthread_self());
+	printf("Writer thread %ld enters CS\n", pthread_self());
 	SHARED_INTEGER = SHARED_INTEGER + 1;
-	sleep(1);
-	printf("Writer thread <%ld> is exiting CS\n", pthread_self());
+	sleep(3);
+	printf("Writer thread %ld is exiting CS\n", pthread_self());
 	//cs
 	
 	//unlock
 	pipe_sem_signal( &wrt );
 	//unlock
+	
 }
 
 /**
@@ -113,7 +124,7 @@ void *writer_thread( void *x ) {
  */
 int main(int argc, char** args) {
 	
-	perror("be sure to make it a counting semaphore");
+	perror("Counting Semophore?");
 	
 	// a variable for looping
 	int i;
@@ -137,8 +148,10 @@ int main(int argc, char** args) {
 	th = (pthread_t*) malloc(sizeof(pthread_t) * n_arriving_threads);
 
 	// init all pipe_sem(s)
-	pipe_sem_init(&wrt, 1);
-	pipe_sem_init(&read_count_mutex, 1);
+	pipe_sem_init(&wrt, n_arriving_threads);
+	pipe_sem_init(&readx, n_arriving_threads);
+	pipe_sem_init(&read_count_mutex, n_arriving_threads);
+	pipe_sem_init(&write_count_mutex, n_arriving_threads);
 	
 	// using the thread_arrival_interval simulate arriving reader/writer threads by calling pthread's pthread_create
 	for(i = 0 ; i < n_arriving_threads ; i++) {
@@ -151,7 +164,10 @@ int main(int argc, char** args) {
 		sleep(thread_arrival_interval);
 	}
 	
-	sleep(thread_arrival_interval);
+	// join the current thread with all child threads to ensure all child threads finish executing
+	for(i = 0 ; i < n_arriving_threads ; i++) {
+		pthread_join(th[i], NULL);
+	}
 	
 	// return 0 to indicate successfull execution
 	return 0;
